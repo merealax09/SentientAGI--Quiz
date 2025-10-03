@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentientAGI Quiz</title>
+<style>
+:root{
+  --primary:#00ff88;
+  --bg:#0a0a0a;
+  --card:#1a1a1a;
+  --text:#fff;
+  --text-secondary:#aaa;
+  --border:#333;
+  --error:#ff4444;
+  --gradient:linear-gradient(135deg,#00ff88 0%,#00cc6a 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.05) 1px,transparent 0);background-size:2rem 2rem}
+.container{background:var(--card);border-radius:24px;width:100%;max-width:640px;padding:40px 30px;display:flex;flex-direction:column;gap:25px;box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(0,255,136,.1);position:relative;overflow:hidden}
+.container::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gradient);box-shadow:0 0 20px var(--primary)}
+.header{text-align:center}
+.logo{font-size:3.5rem;margin-bottom:8px;filter:drop-shadow(0 2px 8px rgba(0,255,136,.3))}
+h1{font-size:2rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{color:var(--text-secondary);font-size:1rem;margin-bottom:15px}
+button.btn{background:var(--gradient);color:#000;border:none;padding:16px 32px;border-radius:50px;font-size:1.1rem;font-weight:700;cursor:pointer;width:100%;transition:.3s}
+button.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,255,136,.4)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.screen{display:none}
+.screen.active{display:flex;flex-direction:column;gap:25px;animation:fade .5s ease}
+@keyframes fade{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.progress{height:8px;background:var(--border);border-radius:4px;overflow:hidden;box-shadow:0 0 10px rgba(0,255,136,.2)}
+.progress-bar{height:100%;background:var(--gradient);width:0%;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.option{background:var(--border);border:2px solid transparent;border-radius:16px;padding:18px 22px;cursor:pointer;transition:all .3s ease;position:relative;overflow:hidden;font-size:1.05rem}
+.option::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:var(--gradient);opacity:0;transition:opacity .3s ease}
+.option:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,255,136,.2)}
+.option:hover::before{opacity:.1}
+.option.correct{border-color:var(--primary);background:rgba(0,255,136,.15);animation:pulse .6s ease}
+.option.incorrect{border-color:var(--error);background:rgba(255,68,68,.15);animation:shake .6s ease}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.feedback{font-weight:600;margin-top:-15px;text-align:center;display:none}
+.feedback.correct{display:block;color:var(--primary)}
+.feedback.incorrect{display:block;color:var(--error)}
+.user-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.user-bar img{width:42px;height:42px;border-radius:50%;background:var(--border);border:2px solid var(--primary)}
+.scorecard{text-align:center;background:var(--border);border-radius:20px;padding:30px 20px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.scorecard .project-logo{font-size:4rem;margin:15px 0;filter:drop-shadow(0 2px 8px rgba(0,255,136,.3))}
+.scorecard .badge{font-size:3rem;margin:15px 0}
+.scorecard .score{font-size:2.5rem;font-weight:700;color:var(--primary);margin:10px 0}
+.scorecard .score-label{font-size:1rem;color:var(--text-secondary)}
+.scorecard .handle{font-size:.9rem;color:var(--text-secondary);margin-top:8px}
+.share-box{display:flex;gap:15px;margin-top:25px}
+.share-box button{flex:1}
+@media(max-width:500px){.container{padding:25px 20px}.logo{font-size:3rem}h1{font-size:1.6rem}.subtitle{font-size:.9rem}.option{font-size:1rem;padding:15px 18px}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="screen active">
+    <div class="header">
+      <div class="logo">🧠</div>
+      <h1>SentientAGI Quiz</h1>
+      <p class="subtitle">15 questions on open-source AGI & decentralised AI</p>
+    </div>
+    <button class="btn" onclick="loginX()">Login with X (Twitter)</button>
+    <button class="btn" onclick="startQuiz()">Continue without login</button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quizScreen" class="screen">
+    <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    <div id="questionCounter" style="font-size:.85rem;color:var(--text-secondary)">Question 1 of 15</div>
+    <div id="questionText" style="font-size:1.25rem;line-height:1.5"></div>
+    <div id="optionsBox" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div id="feedback" class="feedback"></div>
+    <button class="btn" id="nextBtn" onclick="nextQuestion()" disabled>Next →</button>
+  </div>
+
+  <!-- SCORECARD -->
+  <div id="resultScreen" class="screen">
+    <div class="scorecard">
+      <div class="project-logo">🧠</div>
+      <div class="user-bar" id="userBar">
+        <img id="userImg" src="" alt=""><span id="userName">Anonymous Player</span>
+      </div>
+      <div class="badge">🏆</div>
+      <div class="score"><span id="correctScore">0</span> / 15</div>
+      <div class="score-label">Great effort!</div>
+      <div class="handle" id="userHandle"></div>
+    </div>
+    <div class="share-box">
+      <button class="btn" onclick="shareResults()">Share ScoreCard on X</button>
+      <button class="btn" onclick="location.reload()">Try Again</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- DATA ---------- */
+const questions = [
+  {q:"What is the primary mission of @SentientAGI?",opts:["Create proprietary AI for corporates","Build decentralised, open-source AGI for public benefit","Develop gaming-focused AI","Focus solely on blockchain"],ans:1},
+  {q:"Which Polygon co-founder also co-founded SentientAGI?",opts:["Vitalik Buterin","Sandeep Nailwal","Anatoly Yakovenko","Gavin Wood"],ans:1},
+  {q:"What is the user-facing AI platform of SentientAGI?",opts:["ROMA","Sentient Chat","Dobby","ODS"],ans:1},
+  {q:"Which chain does SentientAGI primarily use?",opts:["Ethereum","Solana","Polygon","BSC"],ans:2},
+  {q:"What is ROMA in the GRID ecosystem?",opts:["A token","Multi-agent framework for complex tasks","Hardware miner","Social network"],ans:1},
+  {q:"What does ODS stand for?",opts:["Open Data Storage","Open Deep Search","Optimised Dev System","Open Dialogue Simulator"],ans:1},
+  {q:"Which model was fine-tuned on 2 M+ community feedback points?",opts:["ROMA","Dobby","Fingerprinting","Sentient Chat"],ans:1},
+  {q:"Why is the Fingerprinting library used?",opts:["Digital art generation","Prove model ownership","Speech recognition","Faster txs"],ans:1},
+  {q:"What new feature was added to Sentient Chat recently?",opts:["VR mode","Spaces for reports","Crypto trading","Offline mode"],ans:1},
+  {q:"What summit does SentientAGI host?",opts:["Web3 Summit","Open AGI Summit","Blockchain AI Expo","DeSci Fest"],ans:1},
+  {q:"Who is their partner for autonomous AI agents?",opts:["Chainlink","Autonolas","Aave","Uniswap"],ans:1},
+  {q:"What core principle guides SentientAGI?",opts:["Centralised control","Community governance & profit sharing","Premium-only access","Military focus"],ans:1},
+  {q:"How can users access Sentient Chat (Oct 2025)?",opts:["Paid only","Free + waitlist","Invite-only","Fully open"],ans:1},
+  {q:"Which university was recently visited for an AGI talk?",opts:["MIT","Stanford","Fudan","Oxford"],ans:2},
+  {q:"What does SentientAGI want to prevent?",opts:["Cloud over-use","Corporate capture of AGI","Slow internet","Lack of creativity"],ans:1}
+];
+
+let idx = 0, score = 0, selected = -1, user = {name:"Anonymous Player",img:"",handle:""};
+
+/* ---------- LOGIN ---------- */
+function loginX(){
+  const handle = prompt("Enter your X handle (without @):");
+  if(handle){
+    user.name = '@' + handle.replace(/^@/,'');
+    user.handle = user.name;
+    user.img = `https://unavatar.io/twitter/${handle}`;
+  }
+  startQuiz();
+}
+
+/* ---------- QUIZ ---------- */
+function startQuiz(){
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('quizScreen').classList.add('active');
+  renderQuestion();
+}
+function renderQuestion(){
+  document.getElementById('questionCounter').textContent = `Question ${idx+1} of 15`;
+  document.getElementById('questionText').textContent = questions[idx].q;
+  document.getElementById('progressBar').style.width = (idx*6.67) + '%';
+  const box = document.getElementById('optionsBox'); box.innerHTML = '';
+  questions[idx].opts.forEach((o,i)=>{
+    const div = document.createElement('div'); div.className = 'option';
+    div.textContent = String.fromCharCode(65+i) + '. ' + o;
+    div.onclick = () => selectAnswer(i);
+    box.appendChild(div);
+  });
+  document.getElementById('feedback').className = 'feedback'; 
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('nextBtn').disabled = true;
+  selected = -1;
+}
+function selectAnswer(i){
+  if(selected!==-1)return;
+  selected=i;
+  const opts = document.querySelectorAll('.option');
+  opts[questions[idx].ans].classList.add('correct');
+  if(i!==questions[idx].ans)opts[i].classList.add('incorrect');
+  document.getElementById('feedback').style.display = 'block';
+  document.getElementById('feedback').textContent = i===questions[idx].ans?'✅ Correct!':'❌ Incorrect';
+  if(i===questions[idx].ans)score++;
+  document.getElementById('nextBtn').disabled = false;
+  opts.forEach(o=>o.style.pointerEvents='none');
+}
+function nextQuestion(){
+  idx++;
+  if(idx===15)return showResult();
+  renderQuestion();
+}
+
+/* ---------- RESULT ---------- */
+function showResult(){
+  document.getElementById('quizScreen').classList.remove('active');
+  document.getElementById('resultScreen').classList.add('active');
+  document.getElementById('correctScore').textContent = score;
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('userImg').src = user.img || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDIiIGhlaWdodD0iNDIiIGZpbGw9IiMzMzMiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGR5PSIuM2VtIiBmaWxsPSIjYWFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjIwIj7wn5GMPC90ZXh0Pjwvc3ZnPg==';
+  document.getElementById('userHandle').textContent = user.handle ? user.handle : '';
+}
+
+/* ---------- SHARE ---------- */
+function shareResults(){
+  const text = `I just scored ${score}/15 on the SentientAGI Quiz! 🧠🚀\nTry it yourself: ${location.href}\nvia @AgentxN1 @namyura_ @shtyagi @vivekkolli @abhishek095`;
+  window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+}
+</script>
+</body>
+</html>
